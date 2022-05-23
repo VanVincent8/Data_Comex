@@ -5,18 +5,16 @@ if (!require(RSelenium)) install.packages("RSelenium"); library(RSelenium)
 if (!require(xlsx)) install.packages("xlsx"); library(xlsx)
 
 rm(list = ls())
-setwd("K:/QUOTA/OMD/ANALISI/0_USUARIS/VICENT/EXPORTACIONS/DataComex") 
+setwd(dirname(rstudioapi::getSourceEditorContext()$path)) 
 
 ######################################################################################################################
 # Funcions
 
-descarrega_dades_mensuals_taula_completa <- function(year) {
-  
-  path <- str_c("td.a87xBc > div > table > tbody > tr:nth-child(2) > td > table > tbody > tr:nth-child(2) > td:nth-child(", year, ") > table > tbody > tr:nth-child(2) > td:nth-child(2) > div > a")
+descarrega_dades_mensuals_taula_completa <- function() {
   
   remDr$switchToFrame(NULL)
   remDr$switchToFrame(0)
-  remDr$findElement(using = "css selector", value = path)$clickElement()
+  remDr$findElement(using = "css selector", value = "table.xxdata > tbody > tr:nth-child(2) > td:nth-child(4) > table > tbody > tr:nth-child(2) > td:nth-child(2) > div > a")$clickElement()
   
   remDr$switchToFrame(NULL)
   taula <- remDr$findElement(using = "id", value = "marcoInforme")$getElementAttribute("src")[[1]]
@@ -75,11 +73,15 @@ switching_frames <- function(n) {
 }
 
 ######################################################################################################################
+# Quin any i mesos es cerquen?
+year <- as.numeric(readline("Quin és l'últim any disponible a la web? (Introduir l'any en format yyyy): "))
+months <- as.numeric(readline("Número de mesos que es volen extreure: "))
+
 # Pàgina principal del Data Comex
 url <- "https://comercio.serviciosmin.gob.es/Datacomex/"
 
 # A vegades pot no funcionar. En aquest cas canviar el nombre del port, ex: passar de 5556 a 5557
-rD <- rsDriver(browser="firefox", port=5557L, verbose=F)
+rD <- rsDriver(browser="firefox", port=5558L, verbose=F)
 remDr <- rD[["client"]]
 
 # Naveguem a la url
@@ -119,7 +121,7 @@ remDr$findElement(using = "css selector", value = "#check2")$clickElement()
 
 #### <<< Amèrica >>>
 for (i in 6:9){  
-  year <- str_c("#check", i)
+  check_box <- str_c("#check", i)
   remDr$findElement(using = "css selector", value = year)$clickElement()
 }
 
@@ -156,13 +158,9 @@ switching_frames(3)
 
 remDr$findElement(using = "css selector", value = "#Table1 > tbody > tr:nth-child(5) > td:nth-child(2) > p > a")$clickElement()
 
-# Triar els dos anys consecutius
-any_1 <- 2020
-any_2 <- 2021  # l'any posterior
-
-for (i in (any_1-1995+2):(any_2-1995+2)){  
-  year <- str_c("#check", i)
-  remDr$findElement(using = "css selector", value = year)$clickElement()
+for (i in (year-1995+1):(year-1995+2)){  
+  check_box <- str_c("#check", i)
+  remDr$findElement(using = "css selector", value = check_box)$clickElement()
 }
 
 # Unitats de mesura
@@ -182,12 +180,8 @@ remDr$findElement(using = "id", value = "enviarDatos")$clickElement()
 ######################################################################################################################
 # Creació de la taula final i l'excel
 
-any <- 1  # 0 per veure el primer any seleccionat, 1 pel segon
-mesos <- 12
-
-taula <- generador_taula_mensual(descarrega_dades_mensuals_taula_completa(any + 3), mesos) %>% 
+taula <- generador_taula_mensual(descarrega_dades_mensuals_taula_completa(), months) %>% 
   type_convert(locale = locale(decimal_mark = ",", grouping_mark = "."))
-
 
 remDr$quit() # Tancar sessió
 
