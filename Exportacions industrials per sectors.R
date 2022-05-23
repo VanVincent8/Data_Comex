@@ -5,18 +5,16 @@ if (!require(Selenium)) install.packages("Selenium"); library(RSelenium)
 if (!require(xlsx)) install.packages("xlsx"); library(xlsx)
 
 rm(list = ls())
-setwd("K:/QUOTA/OMD/ANALISI/0_USUARIS/VICENT/EXPORTACIONS/DataComex") 
+setwd(dirname(rstudioapi::getSourceEditorContext()$path)) 
 
 ######################################################################################################################
 # Funcions
 
-descarrega_dades_mensuals_taula_completa <- function(year) {
-  
-  path <- str_c("#table-data > tbody > tr:nth-child(2) > td:nth-child(", year, ") > table > tbody > tr:nth-child(2) > td:nth-child(2) > div > a")
+descarrega_dades_mensuals_taula_completa <- function() {
   
   remDr$switchToFrame(NULL)
   remDr$switchToFrame(0)
-  remDr$findElement(using = "css selector", value = path)$clickElement()
+  remDr$findElement(using = "css selector", value = "div.a32 > a")$clickElement()
   
   remDr$switchToFrame(NULL)
   taula <- remDr$findElement(using = "id", value = "marcoInforme")$getElementAttribute("src")[[1]]
@@ -34,17 +32,15 @@ accedir_semimanufactures <- function() {
   
   remDr$switchToFrame(NULL)
   remDr$switchToFrame(0)
-  remDr$findElement(using = "css selector", value = "#table-data > tbody > tr:nth-child(7) > td:nth-child(2) > table > tbody > tr:nth-child(2) > td:nth-child(2) > div > a")$clickElement()
+  remDr$findElement(using = "css selector", value = "table.xxdata > tbody > tr:nth-child(7) > td:nth-child(2) > table > tbody > tr:nth-child(2) > td:nth-child(2) > div > a")$clickElement()
   
 }
 
-descarrega_dades_mensuals_semimanufactures <- function(year) {
-  
-  path <- str_c("#table-data > tbody > tr:nth-child(2) > td:nth-child(", year, ") > table > tbody > tr:nth-child(2) > td:nth-child(2) > div > a")
+descarrega_dades_mensuals_semimanufactures <- function() {
   
   remDr$switchToFrame(NULL)
   remDr$switchToFrame(0)
-  remDr$findElement(using = "css selector", value = path)$clickElement()
+  remDr$findElement(using = "css selector", value = "table.xxdata > tbody > tr:nth-child(2) > td:nth-child(3) > table > tbody > tr:nth-child(2) > td:nth-child(2) > div > a")$clickElement()
   
   remDr$switchToFrame(NULL)
   taula <- remDr$findElement(using = "id", value = "marcoInforme")$getElementAttribute("src")[[1]]
@@ -103,6 +99,10 @@ switching_frames <- function(n) {
 }
 
 ######################################################################################################################
+# Quin any es cerca?
+year <- as.numeric(readline("Quin és l'últim any disponible a la web? (Introduir l'any en format yyyy): "))
+mesos <- as.numeric(readline("Número de mesos que es volen extreure: "))
+
 # Pàgina principal del Data Comex
 url <- "https://comercio.serviciosmin.gob.es/Datacomex/"
 
@@ -149,10 +149,10 @@ switching_frames(3)
 
 remDr$findElement(using = "css selector", value = "#Table1 > tbody > tr:nth-child(5) > td:nth-child(2) > p > a")$clickElement()
 
-for (i in 23:29){  # en cas d'afegir-se un any nou (ex: 2023) s'haurà d'incrementar el rang de 29 --> 30
-  year <- str_c("#check", i)
-  remDr$findElement(using = "css selector", value = year)$clickElement()
-}
+check_box <- year - 1995 + 2  ## Calculem en quina posició es troba la casella
+check_box_pos <- str_c("#check", check_box)
+
+remDr$findElement(using = "css selector", value = check_box_pos)$clickElement()
 
 # Unitats de mesura
 switching_frames(0)
@@ -172,13 +172,10 @@ remDr$findElement(using = "css selector", value = "div.a63 > a")$clickElement()
 ######################################################################################################################
 # Creació de la taula final i l'excel
 
-mesos <- 2
-any <- 2022
-
-table <- generador_taula_mensual(descarrega_dades_mensuals_taula_completa(any - 2012), mesos)
+table <- generador_taula_mensual(descarrega_dades_mensuals_taula_completa(), mesos)
 
 accedir_semimanufactures()
-taula_semimanufactures <- generador_taula_mensual(descarrega_dades_mensuals_semimanufactures(any - 2012), mesos) %>% slice(3)
+taula_semimanufactures <- generador_taula_mensual(descarrega_dades_mensuals_semimanufactures(), mesos) %>% slice(3)
 remDr$goBack()
 
 
