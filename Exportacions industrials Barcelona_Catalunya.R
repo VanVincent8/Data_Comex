@@ -5,18 +5,16 @@ if (!require(Selenium)) install.packages("Selenium"); library(RSelenium)
 if (!require(xlsx)) install.packages("xlsx"); library(xlsx)
 
 rm(list = ls())
-setwd("K:/QUOTA/OMD/ANALISI/0_USUARIS/VICENT/EXPORTACIONS/DataComex")  
+setwd(dirname(rstudioapi::getSourceEditorContext()$path)) 
 
 ######################################################################################################################
 # Funcions
 
-descarrega_dades_mensuals_taula_completa <- function(year) {
-  
-  path <- str_c("td.a87xBc > div > table > tbody > tr:nth-child(2) > td > table > tbody > tr:nth-child(2) > td:nth-child(", year, ") > table > tbody > tr:nth-child(2) > td:nth-child(2) > div > a")
+descarrega_dades_mensuals_taula_completa <- function() {
   
   remDr$switchToFrame(NULL)
   remDr$switchToFrame(0)
-  remDr$findElement(using = "css selector", value = path)$clickElement()
+  remDr$findElement(using = "css selector", value = "table.xxdata > tbody > tr:nth-child(2) > td:nth-child(3) > table > tbody > tr:nth-child(2) > td:nth-child(2) > div > a")$clickElement()
   
   remDr$switchToFrame(NULL)
   taula <- remDr$findElement(using = "id", value = "marcoInforme")$getElementAttribute("src")[[1]]
@@ -75,6 +73,14 @@ switching_frames <- function(n) {
 }
 
 ######################################################################################################################
+# Zona geogràfica
+zona <- str_to_lower(readline("Escull una zona (Barcelona o Catalunya): "))
+
+######################################################################################################################
+# Quin any i mesos es cerquen?
+year <- as.numeric(readline("Quin és l'últim any disponible a la web? (Introduir l'any en format yyyy): "))
+months <- as.numeric(readline("Número de mesos que es volen extreure: "))
+
 # Pàgina principal del Data Comex
 url <- "https://comercio.serviciosmin.gob.es/Datacomex/"
 
@@ -102,24 +108,24 @@ switching_frames(3)
 remDr$findElement(using = "css selector", value = "#check1")$clickElement()
 
 # Territorial
-
-### Barcelona
-switching_frames(0)
-remDr$findElement(using = "css selector", value = "td.panelClass2 > table > tbody > tr:nth-child(6) > td > div > table > tbody > tr >td:nth-child(2) > select > option:nth-child(2) ")$clickElement()
-
-remDr$findElement(using = "css selector", value = "#FormInforme > table > tbody > tr > td >table >tbody > tr:nth-child(6) > td > div > table > tbody > tr > td:nth-child(3) > i")$clickElement()
-
-switching_frames(3)
-
-remDr$findElement(using = "css selector", value = "#check10")$clickElement()
-
-### Catalunya
-switching_frames(0)
-remDr$findElement(using = "css selector", value = "#FormInforme > table > tbody > tr > td >table >tbody > tr:nth-child(6) > td > div > table > tbody > tr > td:nth-child(3) > i")$clickElement()
-
-switching_frames(3)
-
-remDr$findElement(using = "css selector", value = "#check10")$clickElement()
+if (zona == "barcelona") {
+  switching_frames(0)
+  remDr$findElement(using = "css selector", value = "td.panelClass2 > table > tbody > tr:nth-child(6) > td > div > table > tbody > tr >td:nth-child(2) > select > option:nth-child(2) ")$clickElement()
+  
+  remDr$findElement(using = "css selector", value = "#FormInforme > table > tbody > tr > td >table >tbody > tr:nth-child(6) > td > div > table > tbody > tr > td:nth-child(3) > i")$clickElement()
+  
+  switching_frames(3)
+  
+  remDr$findElement(using = "css selector", value = "#check10")$clickElement()
+  
+} else if (zona == "catalunya") {
+  switching_frames(0)
+  remDr$findElement(using = "css selector", value = "#FormInforme > table > tbody > tr > td >table >tbody > tr:nth-child(6) > td > div > table > tbody > tr > td:nth-child(3) > i")$clickElement()
+  
+  switching_frames(3)
+  
+  remDr$findElement(using = "css selector", value = "#check10")$clickElement()
+}
 
 # Dates
 switching_frames(0)
@@ -130,10 +136,10 @@ switching_frames(3)
 
 remDr$findElement(using = "css selector", value = "#Table1 > tbody > tr:nth-child(5) > td:nth-child(2) > p > a")$clickElement()
 
-for (i in 21:29){  # en cas d'afegir-se un any nou (ex: 2023) s'haurà d'incrementar el rang de 29 --> 30
-  year <- str_c("#check", i)
-  remDr$findElement(using = "css selector", value = year)$clickElement()
-}
+check_box <- year - 1995 + 2  ## Calculem en quina posició es troba la casella
+check_box_pos <- str_c("#check", check_box)
+
+remDr$findElement(using = "css selector", value = check_box_pos)$clickElement()
 
 # Unitats de mesura
 switching_frames(0)
@@ -148,20 +154,10 @@ remDr$findElement(using = "id", value = "enviarDatos")$clickElement()
 ######################################################################################################################
 # Creació de la taula final i l'excel
 
-any <- 2021
-mesos <- 12
-
-table <- generador_taula_mensual(descarrega_dades_mensuals_taula_completa(any - 2010), mesos) %>% 
+table <- generador_taula_mensual(descarrega_dades_mensuals_taula_completa(), months) %>% 
   type_convert(locale = locale(decimal_mark = ",", grouping_mark = "."))
 
-table <- table %>% gather("Data","Valor", 2:(mesos+1), factor_key = T) %>% select(-Categoria)
-
-### Torna a la pàgina per seleccionar els criteris, per si en la mateixa sessió vols descarregar la taula
-### de l'altra zona. Si decideixes fer-ho, tornes a la secció "Territorial" i executes el codi per la zona que
-### has buscat anteriorment. Això eliminarà la selecció. Un cop eliminada, executes el codi de l'altra zona
-### i el codi de la secció "Veim l'informe" i generes la taula.
-remDr$findElement(using = "id", value = "ocMenu_Principal")$clickElement()
-
+table <- table %>% gather("Data","Valor", 2:(months+1), factor_key = T) %>% select(-`Àrea geogràfica`)
 
 remDr$quit() # Tancar sessió
 
