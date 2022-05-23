@@ -99,9 +99,9 @@ switching_frames <- function(n) {
 }
 
 ######################################################################################################################
-# Quin any es cerca?
+# Quin any i mesos es cerquen?
 year <- as.numeric(readline("Quin és l'últim any disponible a la web? (Introduir l'any en format yyyy): "))
-mesos <- as.numeric(readline("Número de mesos que es volen extreure: "))
+months <- as.numeric(readline("Número de mesos que es volen extreure: "))
 
 # Pàgina principal del Data Comex
 url <- "https://comercio.serviciosmin.gob.es/Datacomex/"
@@ -172,10 +172,10 @@ remDr$findElement(using = "css selector", value = "div.a63 > a")$clickElement()
 ######################################################################################################################
 # Creació de la taula final i l'excel
 
-table <- generador_taula_mensual(descarrega_dades_mensuals_taula_completa(), mesos)
+table <- generador_taula_mensual(descarrega_dades_mensuals_taula_completa(), months)
 
 accedir_semimanufactures()
-taula_semimanufactures <- generador_taula_mensual(descarrega_dades_mensuals_semimanufactures(), mesos) %>% slice(3)
+taula_semimanufactures <- generador_taula_mensual(descarrega_dades_mensuals_semimanufactures(), months) %>% slice(3)
 remDr$goBack()
 
 
