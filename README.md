@@ -13,6 +13,6 @@ The metodology followed is quite easy. I navigate to the home of the web page an
 - ___switchToFrame___: permits you to change the current frame.
 
 Once we reach the table, to extract the information we must take it from the page source. Hence, we use another function:
-- ___getPageSource()
+- ___getPageSource()___
 
 Finally, we have the table in html format, so we transform it to a data frame with the library `rvest`.
