@@ -1,16 +1,25 @@
-if (!require(httr)) install.packages("httr"); library(httr)
-if (!require(tidyverse)) install.packages("tidyverse"); library(tidyverse)
-if (!require(rvest)) install.packages("rvest"); library(rvest)
-if (!require(Selenium)) install.packages("Selenium"); library(RSelenium)
-if (!require(xlsx)) install.packages("xlsx"); library(xlsx)
+#########################################################
+#                                                       #
+#        SCRIPT TO DOWNLOAD INDUSTRIAL EXPORTS          #
+#          OF BARCELONA ACCORDING TO SECTOR             #
+#                                                       #
+#########################################################
 
-rm(list = ls())
+###-----------------------------------------------------------------------------
+# Libraries
+
+library(httr)
+library(tidyverse)
+library(rvest)
+library(RSelenium)
+library(xlsx)
+
 setwd(dirname(rstudioapi::getSourceEditorContext()$path)) 
 
-######################################################################################################################
-# Funcions
+###-----------------------------------------------------------------------------
+# Functions
 
-descarrega_dades_mensuals_taula_completa <- function() {
+download_monthly_data_full_table <- function() {
   
   remDr$switchToFrame(NULL)
   remDr$switchToFrame(0)
@@ -28,7 +37,7 @@ descarrega_dades_mensuals_taula_completa <- function() {
   return(html)
 }
 
-accedir_semimanufactures <- function() {
+access_semimanufactures <- function() {
   
   remDr$switchToFrame(NULL)
   remDr$switchToFrame(0)
@@ -36,7 +45,7 @@ accedir_semimanufactures <- function() {
   
 }
 
-descarrega_dades_mensuals_semimanufactures <- function() {
+download_monthly_data_semimanufactures <- function() {
   
   remDr$switchToFrame(NULL)
   remDr$switchToFrame(0)
@@ -54,7 +63,7 @@ descarrega_dades_mensuals_semimanufactures <- function() {
   return(html)
 }
 
-generador_taula_mensual <- function(html, mesos) {
+generator_monthly_table <- function(html, mesos) {
   
   t = 4 + 2 * (mesos-1)
   n = 6 + mesos
@@ -98,21 +107,21 @@ switching_frames <- function(n) {
   }
 }
 
-seleccio_criteris <- function() {
-  # Naveguem a la url
+criteria_selection <- function() {
+  # Navigate to the URL
   remDr$navigate(url)
   
-  # Premem en el botó d'entrar a Datos Comex España
+  # Switch the button "Entrar a Datos Comex España"
   remDr$findElement(using = "css selector", value = "ul.row > li:nth-child(1) > ul > li:nth-child(1) > a")$clickElement()
   
-  # Seleccionem els criteris
+  # Select parameters
   switching_frames(0)
   
-  # Exportacions
+  # Exports
   Sys.sleep(1.5)
   remDr$findElement(using = "css selector", value = "td.panelClass2 > table > tbody > tr:nth-child(3) > td > div > table > tbody > tr >td:nth-child(2) > select > option:nth-child(2) ")$clickElement()
   
-  # Productes
+  # Products
   Sys.sleep(1.5)
   remDr$findElement(using = "css selector", value = "#FormInforme > table > tbody > tr > td >table >tbody > tr:nth-child(4) > td > div > table > tbody > tr > td:nth-child(3) > i")$clickElement()
   
@@ -121,7 +130,7 @@ seleccio_criteris <- function() {
   Sys.sleep(1.5)
   remDr$findElement(using = "css selector", value = "#check1")$clickElement()
   
-  # Territorial
+  # Territory
   switching_frames(0)
   
   remDr$findElement(using = "css selector", value = "td.panelClass2 > table > tbody > tr:nth-child(6) > td > div > table > tbody > tr >td:nth-child(2) > select > option:nth-child(2) ")$clickElement()
@@ -150,51 +159,51 @@ seleccio_criteris <- function() {
   Sys.sleep(1.5)
   remDr$findElement(using = "css selector", value = check_box_pos)$clickElement()
   
-  # Unitats de mesura
+  # Units of measure
   Sys.sleep(1.5)
   switching_frames(0)
   
   remDr$findElement(using = "css selector", value = "td.panelClass2 > table > tbody > tr:nth-child(10) > td > div > table > tbody > tr >td:nth-child(2) > select > option:nth-child(4) ")$clickElement()
   
-  # Veim l'informe
+  # See the report
   Sys.sleep(1.5)
   switching_frames(0)
   
   remDr$findElement(using = "id", value = "enviarDatos")$clickElement()
   
-  # Taula completa
+  # Full table
   Sys.sleep(1.5)
   switching_frames(0)
   remDr$findElement(using = "css selector", value = "div.a63 > a")$clickElement()
 }
 
 ######################################################################################################################
-# Quin any i mesos es cerquen?
+# What year and what months do you wnat to search?
 year <- as.numeric(readline("Quin és l'últim any disponible a la web? (Introduir l'any en format yyyy): "))
 months <- as.numeric(readline("Número de mesos que es volen extreure: "))
 
-# Pàgina principal del Data Comex
+# Url of Data Comex
 url <- "https://comercio.serviciosmin.gob.es/Datacomex/"
 
-# A vegades pot no funcionar. En aquest cas canviar el nombre del port, ex: passar de 5556 a 5557
+# Sometimes may not work. In that case, you must change the port parameter, eg.: 5556 to 5557
 rD <- rsDriver(browser="firefox", port=5558L, verbose=F)
 remDr <- rD[["client"]]
 
-seleccio_criteris()
+criteria_selection()
 
 ######################################################################################################################
 # Creació de la taula final i l'excel
 
-table <- generador_taula_mensual(descarrega_dades_mensuals_taula_completa(), months)
+table <- generator_monthly_table(download_monthly_data_full_table(), months)
 
-accedir_semimanufactures()
-taula_semimanufactures <- generador_taula_mensual(descarrega_dades_mensuals_semimanufactures(), months) %>% slice(3)
+access_semimanufactures()
+taula_semimanufactures <- generator_monthly_table(download_monthly_data_semimanufactures(), months) %>% slice(3)
 remDr$goBack()
 
+remDr$quit() # Quit session
 
-remDr$quit() # Tanques sessió
-
-taula_final <- rbind(table, taula_semimanufactures) %>% type_convert(locale = locale(decimal_mark = ",", grouping_mark = "."))
+taula_final <- rbind(table, taula_semimanufactures) %>% 
+  type_convert(locale = locale(decimal_mark = ",", grouping_mark = "."))
 
 nom_arxiu <- "Exportacions industrials per sectors.xlsx"
 write.xlsx(taula_final, nom_arxiu)

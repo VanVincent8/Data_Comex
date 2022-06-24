@@ -16,7 +16,7 @@ library(xlsx)
 
 setwd(dirname(rstudioapi::getSourceEditorContext()$path)) 
 
-######################################################################################################################
+###-----------------------------------------------------------------------------
 # Functions
 download_monthly_data_full_table <- function() {
   
@@ -181,14 +181,14 @@ criteria_selection <- function() {
   switching_frames(0)
   remDr$findElement(using = "css selector", value = "td.panelClass2 > table > tbody > tr:nth-child(14) > td > table > tbody > tr >td:nth-child(2) > select > option:nth-child(4) ")$clickElement()
   
-  # Access the report
+  # See the report
   Sys.sleep(2)
   switching_frames(0)
   
   remDr$findElement(using = "id", value = "enviarDatos")$clickElement()
 }
 
-######################################################################################################################
+###-----------------------------------------------------------------------------
 # What year and what months do you wnat to search?
 year <- as.numeric(readline("\nQuin és l'any que es vol extreure? (Introduir l'any en format yyyy): "))
 months <- as.numeric(readline("\nNúmero de mesos que es volen extreure: "))
@@ -202,7 +202,7 @@ remDr <- rD[["client"]]
 
 criteria_selection()
 
-######################################################################################################################
+###-----------------------------------------------------------------------------
 # Create final table and excel
 
 taula <- generator_monthly_table(download_monthly_data_full_table(), months) %>% 

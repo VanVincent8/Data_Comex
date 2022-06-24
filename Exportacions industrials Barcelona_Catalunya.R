@@ -1,16 +1,25 @@
-if (!require(httr)) install.packages("httr"); library(httr)
-if (!require(tidyverse)) install.packages("tidyverse"); library(tidyverse)
-if (!require(rvest)) install.packages("rvest"); library(rvest)
-if (!require(Selenium)) install.packages("Selenium"); library(RSelenium)
-if (!require(xlsx)) install.packages("xlsx"); library(xlsx)
+#########################################################
+#                                                       #
+#        SCRIPT TO DOWNLOAD INDUSTRIAL TOTAL            #
+#         EXPORTS OF BARCELONA OR CATALONIA             #
+#                                                       #
+#########################################################
 
-rm(list = ls())
+###-----------------------------------------------------------------------------
+# Libraries
+
+library(httr)
+library(tidyverse)
+library(rvest)
+library(RSelenium)
+library(xlsx)
+
 setwd(dirname(rstudioapi::getSourceEditorContext()$path)) 
 
-######################################################################################################################
-# Funcions
+###-----------------------------------------------------------------------------
+# Functions
 
-descarrega_dades_mensuals_taula_completa <- function() {
+download_monthly_data_full_table <- function() {
   
   remDr$switchToFrame(NULL)
   remDr$switchToFrame(0)
@@ -28,7 +37,7 @@ descarrega_dades_mensuals_taula_completa <- function() {
   return(html)
 }
 
-generador_taula_mensual <- function(html, mesos) {
+generator_monthly_table <- function(html, mesos) {
   
   t = 4 + 2 * (mesos-1)
   n = 6 + mesos
@@ -72,21 +81,19 @@ switching_frames <- function(n) {
   }
 }
 
-seleccio_criteris <- function() {
-  # Naveguem a la url
+criteria_selection <- function() {
+  # Navigate to the URL
   remDr$navigate(url)
   
-  # Premem en el botó d'entrar a Datos Comex España
+  # Switch the button "Entrar a Datos Comex España"
   remDr$findElement(using = "css selector", value = "ul.row > li:nth-child(1) > ul > li:nth-child(1) > a")$clickElement()
   
-  # Seleccionem els criteris
-  
-  # Exportacions
+  # Exports
   Sys.sleep(1.5)
   switching_frames(0)
   remDr$findElement(using = "css selector", value = "td.panelClass2 > table > tbody > tr:nth-child(3) > td > div > table > tbody > tr >td:nth-child(2) > select > option:nth-child(2) ")$clickElement()
   
-  # Productes
+  # Products
   Sys.sleep(1.5)
   remDr$findElement(using = "css selector", value = "#FormInforme > table > tbody > tr > td >table >tbody > tr:nth-child(4) > td > div > table > tbody > tr > td:nth-child(3) > i")$clickElement()
   
@@ -95,7 +102,7 @@ seleccio_criteris <- function() {
   Sys.sleep(1.5)
   remDr$findElement(using = "css selector", value = "#check1")$clickElement()
   
-  # Territorial
+  # Territory
   if (zona == "barcelona") {
     switching_frames(0)
     remDr$findElement(using = "css selector", value = "td.panelClass2 > table > tbody > tr:nth-child(6) > td > div > table > tbody > tr >td:nth-child(2) > select > option:nth-child(2) ")$clickElement()
@@ -129,13 +136,13 @@ seleccio_criteris <- function() {
   Sys.sleep(1.5)
   remDr$findElement(using = "css selector", value = check_box_pos)$clickElement()
   
-  # Unitats de mesura
+  # Units of measure
   Sys.sleep(1.5)
   switching_frames(0)
   
   remDr$findElement(using = "css selector", value = "td.panelClass2 > table > tbody > tr:nth-child(10) > td > div > table > tbody > tr >td:nth-child(2) > select > option:nth-child(4) ")$clickElement()
   
-  # Veim l'informe
+  # See the report
   Sys.sleep(1.5)
   switching_frames(0)
   
@@ -143,32 +150,32 @@ seleccio_criteris <- function() {
 }
 
 ######################################################################################################################
-# Zona geogràfica
+# Barcelona or Catalunya
 zona <- str_to_lower(readline("\nEscull una zona (Barcelona o Catalunya): "))
 
 ######################################################################################################################
-# Quin any i mesos es cerquen?
+# What year and what months do you wnat to search?
 year <- as.numeric(readline("\nQuin és l'any que es vol extreure? (Introduir l'any en format yyyy): "))
 months <- as.numeric(readline("\nNúmero de mesos que es volen extreure: "))
 
-# Pàgina principal del Data Comex
+# Url of Data Comex
 url <- "https://comercio.serviciosmin.gob.es/Datacomex/"
 
-# A vegades pot no funcionar. En aquest cas canviar el nombre del port, ex: passar de 5556 a 5557
+# Sometimes may not work. In that case, you must change the port parameter, eg.: 5556 to 5557
 rD <- rsDriver(browser="firefox", port=5551L, verbose=F)
 remDr <- rD[["client"]]
 
-seleccio_criteris()
+criteria_selection()
 
 ######################################################################################################################
-# Creació de la taula final i l'excel
+# Create final table and excel
 
-table <- generador_taula_mensual(descarrega_dades_mensuals_taula_completa(), months) %>% 
+table <- generator_monthly_table(download_monthly_data_full_table(), months) %>% 
   type_convert(locale = locale(decimal_mark = ",", grouping_mark = "."))
 
 table <- table %>% gather("Data","Valor", 2:(months+1), factor_key = T) %>% select(-Categoria)
 
-remDr$quit() # Tancar sessió
+remDr$quit() # Quit session
 
 nom_arxiu <- str_c("Exportacions industrials ", str_to_upper(zona), ".xlsx")
 write.xlsx(table, nom_arxiu)
